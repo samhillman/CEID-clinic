@@ -48,7 +48,8 @@ wnv %>%
   labs(xlab = "Year",
        ylab = "Total number of WNV cases") +
   facet_wrap(~Year)+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_blank(),
+        legend.key.width = unit(0.3, "cm"))
 
 
 #try to create stacked histogram
@@ -106,6 +107,8 @@ wnv %>%
   geom_errorbar(aes(ymin = ndr_mean - ndr_se, 
                     ymax = ndr_mean + ndr_se)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
 
 ##### Control of Flow #####
 head(wnv$Longitude)

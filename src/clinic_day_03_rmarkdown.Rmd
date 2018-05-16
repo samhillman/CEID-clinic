@@ -1,0 +1,134 @@
+---
+title: "clinic_day_03_rmd"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(GGally)
+library(plotly)
+wnv <- read_csv("https://raw.githubusercontent.com/jdrakephd/ideas-workshop/master/wnv.csv")
+```
+
+## WNV analysis
+
+Analysis of the WNV dataset from <https://raw.githubusercontent.com/jdrakephd/ideas-workshop/master/wnv.csv>.
+
+
+Let's examine our data to start - 
+
+```{r data}
+head(wnv)
+wnv %>% select(-State) %>% ggpairs(.)
+```
+
+## Including Plots
+How do the cases per year change?
+
+```{r pressure, echo=FALSE}
+wnv %>%
+  mutate(log_total = log10(Total)) %>%
+  ggplot(aes(x = State, y = log_total, fill = State)) + 
+  geom_bar(stat="identity") +
+  labs(xlab = "Year",
+       ylab = "Total number of WNV cases") +
+  facet_wrap(~Year)+
+  theme(axis.text.x = element_blank(),
+        legend.key.width = unit(0.3, "cm"))
+```
+<br>
+Although hard to read, we can see a definite change in both cases per year and a difference in cases per state.
+
+## Neuroinvasive disease rates
+WNV can cause meningitis, but not in all cases.
+
+What is the neuroinvasive disease rate of WNV, and how does this differ by state?
+
+```{r ndr}
+#First, let us calculate the neuroinvasive disease rate:
+wnv <- mutate(wnv, ndr = EncephMen / Total)
+
+#Then, we define two functions to calculate the Standard Error (se) and Mean of the ndr:
+
+#function for finding mean
+fun_mean <- function(x) {
+  l <- length(x)
+  s <- sum(x)
+  m <- s / l
+  return(m)
+}
+
+#function for finding standard error
+fun_se <- function (x){
+  se <- sd(x) / sqrt(length(x))
+  return(se)
+}
+
+#Then, we can plot the mean ndr per state and include the standard error:
+wnv %>%
+  group_by(State) %>%
+  summarise(ndr_mean = fun_mean(ndr), ndr_se=fun_se(ndr)) %>%
+  ggplot(aes(x = State, y = ndr_mean)) +
+  geom_bar(stat = "identity") + 
+  geom_errorbar(aes(ymin = ndr_mean - ndr_se, 
+                   ymax = ndr_mean + ndr_se)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## East vs West, North vs South - death rates
+Is there a location effect on WNV death rates?
+
+We can check!
+
+To start, we'll define the case fatality rate (CFR) - 
+
+```{r}
+wnv %>% 
+  ungroup() %>%
+  group_by(State, Year) %>% 
+  summarise(CFR = (Fatal / Total) * 100) 
+
+wnv$CFR <- (wnv$Fatal / wnv$Total) * 100
+
+head(wnv)
+```
+
+We'll first look at the difference between Eastern and Western states. We'll classify each state as either 'East' or 'West', depending on their location in relation to the mean latitude of the states.
+
+```{r}
+wnv$east_west <- ifelse(wnv$Longitude < mean(wnv$Longitude), "West", "East")
+table(wnv$east_west)
+```
+
+Then, we can group_by the state's location, and test to see if there is a difference in rates:
+```{r}
+wnv %>%
+  group_by(east_west) %>%
+  summarise(CFR_mean = fun_mean(CFR), CFR_se=fun_se(CFR)) 
+
+#non-parametric test needed
+hist(wnv$CFR)
+wilcox.test(wnv$CFR ~ wnv$east_west)
+```
+
+What about North vs South?
+
+``` {r}
+ggplot(wnv, aes(x = Latitude, y = CFR)) +
+         geom_point()
+
+ggplot(wnv, aes(x = Latitude, y = CFR)) +
+  geom_smooth(method = "gam")
+
+summary(lm(CFR ~ Latitude, data = wnv))
+```
+
+## Interactive plots!
+
+Let's look at the North vs South plot in more detail - 
+```{r, echo = FALSE}
+p <- ggplot(wnv, aes(x = Latitude, y = CFR)) +
+         geom_point()
+ggplotly(p)
+```

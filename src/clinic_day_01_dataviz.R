@@ -115,7 +115,6 @@ ggplot(data=mers, mapping=aes(x=epi.day, y=infectious.period2)) +
 head(mers)
 names(mers)
 
-
 mers %>% 
   group_by(country, epi.day) %>% 
   summarise(cfr = sum(!is.na(death))/length(death)) %>%
@@ -129,31 +128,13 @@ mers %>%
 
 #try without dplyr!
 head(mers)
-cfr <- data.frame()
-
 mers$dead <- ifelse(is.na(mers$death), TRUE, FALSE)
+mean(mers$dead) #total CFR
 
-for (i in seq_along(mers$country)){
-  mean[i] <- mean(cfr$dead)
-}
+ggplot(mers, aes(x = epi.day, y = mean(dead))) +
+  geom_point(aes(color = country)) +
+  facet_wrap(~country)
 
-jordan <- subset(mers, country == "Jordan")
-mean(jordan$dead)
-
-
-for (i in seq_along(mers_country)) {
-  mers_cfr[i] <- ifelse(mers$country == mers$country[i], 
-                        sum(!is.na(death))/length(death)), 
-                        mers_cfr[i])
-}
-
-
-cfr_function <- function(df) {
-  for (i in seq_along(unique(df$country)))
-    subset(df, df$country == df[i])
-}
-
-cfr_function(mers)
 
 ##### Exercise 7 - ggplot extensions #####
 install.packages("ggplot2-exts")
